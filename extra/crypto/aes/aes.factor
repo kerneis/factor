@@ -2,7 +2,8 @@
 ! Copyright (C) 2008 Doug Coleman.
 ! See http://factorcode.org/license.txt for BSD license.
 USING: arrays grouping kernel math memoize sequences
-math.bitwise math.order math.parser locals ;
+math.bitwise math.order math.parser locals
+memory tools.time tools.profiler.sampling random fry prettyprint ;
 EXCLUDE: math.bits => bits ;
 IN: crypto.aes
 
@@ -183,3 +184,25 @@ MEMO: d-table ( -- array )
     [ swap inv-aes-round ] reduce
     inv-shift-rows inv-sub-bytes add-round-key ;
 
+: random-block ( -- block )
+    4 [ 4 256 random-integers ] replicate ;
+
+! Expand a random key only once, then apply aes-function to
+! 1000 random blocks, and output the average speed.
+:: aes-bench ( aes-function -- bench-quot )
+    random-block aes-128-expand-key
+    '[ 1000
+     [ _ random-block aes-function call( k b -- b' ) drop ]
+     times
+     ]
+    gc ; inline
+
+: time-bench ( aes-function -- block/s )
+    aes-bench benchmark 1e12 swap / ;
+
+: profile-bench ( aes-function -- )
+    aes-bench profile top-down profile. ;
+
+: run-bench ( -- )
+    [ aes-128-encrypt ] time-bench >integer .
+    [ aes-128-decrypt ] time-bench >integer .  ;
