@@ -1,7 +1,7 @@
 ! Copyright (C) 2013 Gabriel Kerneis.
 ! Copyright (C) 2008 Doug Coleman.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: arrays grouping kernel math sequences
+USING: arrays grouping kernel math sequences byte-arrays
 math.bitwise math.order math.parser locals literals
 memory tools.time tools.profiler.sampling random fry prettyprint ;
 EXCLUDE: math.bits => bits ;
@@ -10,7 +10,7 @@ IN: crypto.aes
 CONSTANT: AES_BLOCK_SIZE 16
 
 CONSTANT: sbox
-{
+B{
     0x63 0x7c 0x77 0x7b 0xf2 0x6b 0x6f 0xc5
     0x30 0x01 0x67 0x2b 0xfe 0xd7 0xab 0x76
     0xca 0x82 0xc9 0x7d 0xfa 0x59 0x47 0xf0
@@ -45,9 +45,14 @@ CONSTANT: sbox
     0x41 0x99 0x2d 0x0f 0xb0 0x54 0xbb 0x16
 }
 
-CONSTANT: inv-sbox ${ 256 [ sbox index ] each-integer }
+CONSTANT: inv-sbox
+    $[ ${ 256 [ sbox index ] each-integer } >byte-array ]
 
-CONSTANT: rcon { 0x01 0x02 0x04 0x08 0x10 0x20 0x40 0x80 0x1b 0x36 0x6c } 
+CONSTANT: rcon
+    $[
+    { 0x01 0x02 0x04 0x08 0x10 0x20 0x40 0x80 0x1b 0x36 0x6c }
+    [ 0 0 0 4byte-array ] map
+    ]
 
 ! Arithmetic in GF(2^8) --- see FIPS 197, §4.
 ! a(x) and b(x) are represented by words.
@@ -84,7 +89,6 @@ CONSTANT: rcon { 0x01 0x02 0x04 0x08 0x10 0x20 0x40 0x80 0x1b 0x36 0x6c }
     [ bitxor ] 2map ;
 
 : expand-key-step ( key rcon -- next-key )
-    { 0 0 0 } swap prefix
     over last 1 rot-word sub-word
     xor-word
     [ xor-word ] accumulate swap suffix rest ;
@@ -98,17 +102,17 @@ CONSTANT: rcon { 0x01 0x02 0x04 0x08 0x10 0x20 0x40 0x80 0x1b 0x36 0x6c }
 : shift-rows ( state -- state' )
     flip [ rot-word ] map-index flip ;
 
-: word-product ( word1 word1 -- word1*word2 )
+: word-product ( word word' -- byte )
     [ gf-mult ] [ bitxor ] 2map-reduce ;
 
-: matrix-product ( word matrix -- word*matrix )
-    [ word-product ] with map ;
+: matrix-product ( word matrix -- word' )
+    [ word-product ] with B{ } map-as ;
 
 : mix-column ( word -- word' )
-    { { 2 3 1 1 }
-      { 1 2 3 1 }
-      { 1 1 2 3 }
-      { 3 1 1 2 } } matrix-product ;
+    { B{ 2 3 1 1 }
+      B{ 1 2 3 1 }
+      B{ 1 1 2 3 }
+      B{ 3 1 1 2 } } matrix-product ;
 
 : mix-columns ( state -- state' )
     [ mix-column ] map ;
@@ -134,10 +138,10 @@ CONSTANT: rcon { 0x01 0x02 0x04 0x08 0x10 0x20 0x40 0x80 0x1b 0x36 0x6c }
     [ [ inv-sbox nth ] map ] map ;
 
 : inv-mix-column ( word -- word' )
-    { { 0xe 0xb 0xd 0x9 }
-      { 0x9 0xe 0xb 0xd }
-      { 0xd 0x9 0xe 0xb }
-      { 0xb 0xd 0x9 0xe } } matrix-product ;
+    { B{ 0xe 0xb 0xd 0x9 }
+      B{ 0x9 0xe 0xb 0xd }
+      B{ 0xd 0x9 0xe 0xb }
+      B{ 0xb 0xd 0x9 0xe } } matrix-product ;
 
 : inv-mix-columns ( state -- state' )
     [ inv-mix-column ] map ;
@@ -152,7 +156,7 @@ CONSTANT: rcon { 0x01 0x02 0x04 0x08 0x10 0x20 0x40 0x80 0x1b 0x36 0x6c }
     inv-shift-rows inv-sub-bytes add-round-key ;
 
 : random-block ( -- block )
-    4 [ 4 256 random-integers ] replicate ;
+    4 [ 4 random-bytes ] replicate ;
 
 ! Expand a random key only once, then apply aes-function to
 ! 1000 random blocks, and output the average speed.
