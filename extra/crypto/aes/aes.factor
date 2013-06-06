@@ -2,7 +2,7 @@
 ! Copyright (C) 2008 Doug Coleman.
 ! See http://factorcode.org/license.txt for BSD license.
 USING: arrays grouping kernel math sequences byte-arrays
-math.bitwise math.order math.parser locals literals
+math.bitwise math.order math.parser locals literals typed
 memory tools.time tools.profiler.sampling random fry prettyprint ;
 EXCLUDE: math.bits => bits ;
 IN: crypto.aes
@@ -59,7 +59,7 @@ CONSTANT: rcon
 ! m(x) is fixed by the standard.
 
 ! See FIPS 197, §4.2.1.
-: xtime ( b(x) -- x*b(x)%m(x) )
+TYPED: xtime ( b(x): fixnum -- x*b(x)%m(x): fixnum )
     [ 1 shift ]
     [ 0x80 bitand 0 = 0 0x1b ? ] bi bitxor 8 bits ;
 
@@ -70,7 +70,7 @@ CONSTANT: rcon
 ! See FIPS 197, §4.2.1.
 ! Almost symmetric, but more efficient if a(x) > b(x).
 ! Fails if b(x) = 0 (2map-reduce on an empty sequence).
-: gf-mult ( a(x) b(x) -- a(x)*b(x)%m(x) )
+TYPED: gf-mult ( a(x): fixnum b(x): fixnum -- a(x)*b(x)%m(x): fixnum )
     make-bits
     [ length nxtimes ] keep swap
     [ 0 ? ] [ bitxor ] 2map-reduce ;
