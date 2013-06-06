@@ -65,11 +65,11 @@ CONSTANT: rcon
 ! See FIPS 197, §4.2.1.
 TYPED: xtime ( b(x): fixnum -- x*b(x)%m(x): fixnum )
     [ 1 shift ]
-    [ 0x80 bitand 0 = 0 0x1b ? ] bi bitxor 8 bits ;
+    [ 0x80 bitand 0 = 0 0x1b ? ] bi bitxor 8 bits ; inline
 
 ! Accumulate x * ... * x * b(x).
 TYPED: nxtimes ( b(x): fixnum n: fixnum -- seq: byte-array )
-    [ [ xtime ] keep ] B{ } replicate-as nip ;
+    [ [ xtime ] keep ] B{ } replicate-as nip ; inline
 
 ! See FIPS 197, §4.2.1.
 ! Almost symmetric, but more efficient if a(x) > b(x).
@@ -77,7 +77,7 @@ TYPED: nxtimes ( b(x): fixnum n: fixnum -- seq: byte-array )
 TYPED: gf-mult ( a(x): fixnum b(x): fixnum -- a(x)*b(x)%m(x): fixnum )
     make-bits
     [ length nxtimes ] keep swap
-    [ 0 ? ] [ bitxor ] 2map-reduce ;
+    [ 0 ? ] [ bitxor ] 2map-reduce ; inline
 
 ! Words are represented as arrays of 4 bytes.
 ! A representation based on uint32 would certainly be more
