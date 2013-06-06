@@ -1,7 +1,7 @@
 ! Copyright (C) 2013 Gabriel Kerneis.
 ! Copyright (C) 2008 Doug Coleman.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: arrays grouping kernel math memoize sequences
+USING: arrays grouping kernel math sequences
 math.bitwise math.order math.parser locals literals
 memory tools.time tools.profiler.sampling random fry prettyprint ;
 EXCLUDE: math.bits => bits ;
@@ -69,43 +69,6 @@ CONSTANT: rcon { 0x01 0x02 0x04 0x08 0x10 0x20 0x40 0x80 0x1b 0x36 0x6c }
     make-bits
     [ length nxtimes ] keep swap
     [ 0 ? ] [ bitxor ] 2map-reduce ;
-
-: ui32 ( a0 a1 a2 a3 -- a )
-    [ 8 shift ] [ 16 shift ] [ 24 shift ] tri*
-    bitor bitor bitor 32 bits ;
-
-:: set-t ( T i -- )
-    i sbox nth :> a1
-    a1 xtime :> a2
-    a1 a2 bitxor :> a3
-
-    a2 a1 a1 a3 ui32 i T set-nth
-    a3 a2 a1 a1 ui32 i 0x100 + T set-nth
-    a1 a3 a2 a1 ui32 i 0x200 + T set-nth
-    a1 a1 a3 a2 ui32 i 0x300 + T set-nth ;
-
-MEMO: t-table ( -- array )
-    1024 0 <array>
-    dup 256 [ set-t ] with each-integer ;
-
-:: set-d ( D i -- )
-    i inv-sbox nth :> a1
-    a1 xtime :> a2
-    a2 xtime :> a4
-    a4 xtime :> a8
-    a8 a1 bitxor :> a9
-    a9 a2 bitxor :> ab
-    a9 a4 bitxor :> ad
-    a8 a4 a2 bitxor bitxor :> ae
-
-    ae a9 ad ab ui32 i D set-nth
-    ab ae a9 ad ui32 i 0x100 + D set-nth
-    ad ab ae a9 ui32 i 0x200 + D set-nth
-    a9 ad ab ae ui32 i 0x300 + D set-nth ;
-
-MEMO: d-table ( -- array )
-    1024 0 <array>
-    dup 256 [ set-d ] with each-integer ;
 
 ! Words are represented as arrays of 4 bytes.
 ! A representation based on uint32 would certainly be more
