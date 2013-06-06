@@ -161,6 +161,24 @@ FUNCTION: void RSA_free ( void* rsa ) ;
 FUNCTION: int RSA_print_fp ( void* fp, void* x, int offset ) ;
 
 ! ===============================================
+! aes.h
+! ===============================================
+
+CONSTANT: AES_MAXNR 14
+
+! rd_key[4 *(AES_MAXNR + 1)] = rd_key[60]
+STRUCT: AES_KEY
+    { rd_key uint[60] }
+    { rounds int } ;
+
+FUNCTION: int AES_set_encrypt_key ( uchar* userKey, int bits, AES_KEY* key ) ;
+FUNCTION: int AES_set_decrypt_key ( uchar* userKey, int bits, AES_KEY* key ) ;
+
+FUNCTION: void AES_encrypt ( uchar* in, uchar* out, AES_KEY* key ) ;
+FUNCTION: void AES_decrypt ( uchar* in, uchar* out, AES_KEY* key ) ;
+
+
+! ===============================================
 ! objects.h
 ! ===============================================
 
