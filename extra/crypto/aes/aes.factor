@@ -3,7 +3,9 @@
 ! See http://factorcode.org/license.txt for BSD license.
 USING: arrays grouping kernel math sequences byte-arrays
 math.bitwise math.order math.parser locals literals typed
-memory tools.time tools.profiler.sampling random fry prettyprint ;
+memory tools.time tools.profiler.sampling random fry prettyprint
+math.statistics
+;
 EXCLUDE: math.bits => bits ;
 IN: crypto.aes
 
@@ -199,10 +201,10 @@ USING: openssl.libcrypto classes.struct ;
     aes-bench profile top-down profile. ;
 
 : run-bench ( -- )
-    [ aes-128-expand-key ] [ aes-128-encrypt ]
-    time-bench >integer .
-    [ aes-128-expand-key ] [ aes-128-decrypt ]
-    time-bench >integer .  ;
+    10 [ [ aes-128-expand-key ] [ aes-128-encrypt ]
+    time-bench ] replicate mean >integer .
+    10 [ [ aes-128-expand-key ] [ aes-128-decrypt ]
+    time-bench ] replicate mean >integer . ;
 
 : openssl-bench ( -- )
     [ openssl-expand-encrypt-key ] [ openssl-encrypt ]
