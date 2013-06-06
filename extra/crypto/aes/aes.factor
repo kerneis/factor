@@ -64,7 +64,7 @@ TYPED: xtime ( b(x): fixnum -- x*b(x)%m(x): fixnum )
     [ 0x80 bitand 0 = 0 0x1b ? ] bi bitxor 8 bits ;
 
 ! Accumulate x * ... * x * b(x).
-: nxtimes ( b(x) n -- seq )
+TYPED: nxtimes ( b(x): fixnum n: fixnum -- seq )
     [ [ xtime ] keep ] replicate nip ;
 
 ! See FIPS 197, §4.2.1.
