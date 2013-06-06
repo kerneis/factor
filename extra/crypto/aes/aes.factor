@@ -2,14 +2,14 @@
 ! Copyright (C) 2008 Doug Coleman.
 ! See http://factorcode.org/license.txt for BSD license.
 USING: arrays grouping kernel math memoize sequences
-math.bitwise math.order math.parser locals
+math.bitwise math.order math.parser locals literals
 memory tools.time tools.profiler.sampling random fry prettyprint ;
 EXCLUDE: math.bits => bits ;
 IN: crypto.aes
 
 CONSTANT: AES_BLOCK_SIZE 16
 
-: sbox ( -- array )
+CONSTANT: sbox
 {
     0x63 0x7c 0x77 0x7b 0xf2 0x6b 0x6f 0xc5
     0x30 0x01 0x67 0x2b 0xfe 0xd7 0xab 0x76
@@ -43,12 +43,11 @@ CONSTANT: AES_BLOCK_SIZE 16
     0x9b 0x1e 0x87 0xe9 0xce 0x55 0x28 0xdf
     0x8c 0xa1 0x89 0x0d 0xbf 0xe6 0x42 0x68
     0x41 0x99 0x2d 0x0f 0xb0 0x54 0xbb 0x16
-} ;
+}
 
-: inv-sbox ( -- array )
-    256 0 <array>
-    dup 256 [ dup sbox nth rot set-nth ] with each-integer ;
+CONSTANT: inv-sbox ${ 256 [ sbox index ] each-integer }
 
+CONSTANT: rcon { 0x01 0x02 0x04 0x08 0x10 0x20 0x40 0x80 0x1b 0x36 0x6c } 
 
 ! Arithmetic in GF(2^8) --- see FIPS 197, §4.
 ! a(x) and b(x) are represented by words.
@@ -70,9 +69,6 @@ CONSTANT: AES_BLOCK_SIZE 16
     make-bits
     [ length nxtimes ] keep swap
     [ 0 ? ] [ bitxor ] 2map-reduce ;
-
-MEMO: rcon ( -- array )
-    0x01 11 nxtimes ;
 
 : ui32 ( a0 a1 a2 a3 -- a )
     [ 8 shift ] [ 16 shift ] [ 24 shift ] tri*
