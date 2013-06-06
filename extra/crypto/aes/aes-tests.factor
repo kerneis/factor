@@ -402,7 +402,7 @@ IN: crypto.aes.tests
 ] unit-test
 
 ! FIPS 197, §4.2.1
-{ 0xfe } [ 0x57 0x13 nxtime ] unit-test
+{ 0xfe } [ 0x57 0x13 gf-mult ] unit-test
 
 ! Test vectors from wikipedia
 ! https://en.wikipedia.org/wiki/Rijndael_mix_columns

@@ -1,4 +1,4 @@
-! Copyright (C) 2013 Gabriel Kerneis
+! Copyright (C) 2013 Gabriel Kerneis.
 ! Copyright (C) 2008 Doug Coleman.
 ! See http://factorcode.org/license.txt for BSD license.
 USING: arrays grouping kernel math memoize sequences
@@ -49,22 +49,30 @@ CONSTANT: AES_BLOCK_SIZE 16
     256 0 <array>
     dup 256 [ dup sbox nth rot set-nth ] with each-integer ;
 
-! See FIPS 197, §4.2.1.
 
-: xtime ( x -- x' )
+! Arithmetic in GF(2^8) --- see FIPS 197, §4.
+! a(x) and b(x) are represented by words.
+! m(x) is fixed by the standard.
+
+! See FIPS 197, §4.2.1.
+: xtime ( b(x) -- x*b(x)%m(x) )
     [ 1 shift ]
     [ 0x80 bitand 0 = 0 0x1b ? ] bi bitxor 8 bits ;
 
-: make-xtime ( x0 n -- seq )
+! Accumulate x * ... * x * b(x).
+: nxtimes ( b(x) n -- seq )
     [ [ xtime ] keep ] replicate nip ;
 
-: nxtime ( x y -- x' )
+! See FIPS 197, §4.2.1.
+! Almost symmetric, but more efficient if a(x) > b(x).
+! Fails if b(x) = 0 (2map-reduce on an empty sequence).
+: gf-mult ( a(x) b(x) -- a(x)*b(x)%m(x) )
     make-bits
-    [ length make-xtime ] keep swap
+    [ length nxtimes ] keep swap
     [ 0 ? ] [ bitxor ] 2map-reduce ;
 
 MEMO: rcon ( -- array )
-    0x01 11 make-xtime ;
+    0x01 11 nxtimes ;
 
 : ui32 ( a0 a1 a2 a3 -- a )
     [ 8 shift ] [ 16 shift ] [ 24 shift ] tri*
@@ -107,13 +115,13 @@ MEMO: d-table ( -- array )
 ! A representation based on uint32 would certainly be more
 ! efficient, but [shift-rows] would need to be changed.
 
-: sub-word ( word -- word )
+: sub-word ( word -- word' )
     [ sbox nth ] map ;
 
-: rot-word ( word n -- word )
+: rot-word ( word n -- word' )
      cut-slice prepend ;
 
-: xor-word ( word word -- word )
+: xor-word ( word1 word2 -- word1^word2 )
     [ bitxor ] 2map ;
 
 : expand-key-step ( key rcon -- next-key )
@@ -125,34 +133,34 @@ MEMO: d-table ( -- array )
 : aes-128-expand-key ( key -- round-keys )
     rcon swap [ expand-key-step ] accumulate nip ;
 
-: sub-bytes ( state -- state )
+: sub-bytes ( state -- state' )
     [ sub-word ] map ;
 
-: shift-rows ( state -- state )
+: shift-rows ( state -- state' )
     flip [ rot-word ] map-index flip ;
 
-: word-product ( word word -- byte )
-    [ nxtime ] [ bitxor ] 2map-reduce ;
+: word-product ( word1 word1 -- word1*word2 )
+    [ gf-mult ] [ bitxor ] 2map-reduce ;
 
-: matrix-product ( word matrix -- word )
+: matrix-product ( word matrix -- word*matrix )
     [ word-product ] with map ;
 
-: mix-column ( word -- word )
+: mix-column ( word -- word' )
     { { 2 3 1 1 }
       { 1 2 3 1 }
       { 1 1 2 3 }
       { 3 1 1 2 } } matrix-product ;
 
-: mix-columns ( state -- state )
+: mix-columns ( state -- state' )
     [ mix-column ] map ;
 
-: add-round-key ( round-key state -- state )
+: add-round-key ( round-key state -- state' )
     [ xor-word ] 2map ;
 
-: aes-round ( round-key state -- state )
+: aes-round ( round-key state -- state' )
    sub-bytes shift-rows mix-columns add-round-key ;
 
-: aes-128-encrypt ( expanded-key block -- block )
+: aes-128-encrypt ( expanded-key block -- encrypted-block )
     [ unclip ] dip add-round-key
     [ unclip-last swap ] dip
     [ swap aes-round ] reduce
@@ -160,25 +168,25 @@ MEMO: d-table ( -- array )
 
 ! Inverse transformations for decrypt
 
-: inv-shift-rows ( state -- state )
+: inv-shift-rows ( state -- state' )
     flip { 0 3 2 1 } [ rot-word ] 2map flip ;
 
-: inv-sub-bytes ( state -- state )
+: inv-sub-bytes ( state -- state' )
     [ [ inv-sbox nth ] map ] map ;
 
-: inv-mix-column ( word -- word )
+: inv-mix-column ( word -- word' )
     { { 0xe 0xb 0xd 0x9 }
       { 0x9 0xe 0xb 0xd }
       { 0xd 0x9 0xe 0xb }
       { 0xb 0xd 0x9 0xe } } matrix-product ;
 
-: inv-mix-columns ( state -- state )
+: inv-mix-columns ( state -- state' )
     [ inv-mix-column ] map ;
 
-: inv-aes-round ( round-key state -- state )
+: inv-aes-round ( round-key state -- state' )
    inv-shift-rows inv-sub-bytes add-round-key inv-mix-columns ;
 
-: aes-128-decrypt ( expanded-key block -- block )
+: aes-128-decrypt ( expanded-key block -- decrypted-block )
     [ reverse unclip ] dip add-round-key
     [ unclip-last swap ] dip
     [ swap inv-aes-round ] reduce
