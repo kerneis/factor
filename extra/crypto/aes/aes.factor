@@ -79,13 +79,13 @@ TYPED: gf-mult ( a(x): fixnum b(x): fixnum -- a(x)*b(x)%m(x): fixnum )
 ! A representation based on uint32 would certainly be more
 ! efficient, but [shift-rows] would need to be changed.
 
-: sub-word ( word -- word' )
+TYPED: sub-word ( word: byte-array -- word': byte-array )
     [ sbox nth ] map ;
 
-: rot-word ( word n -- word' )
+TYPED: rot-word ( word: byte-array n: fixnum -- word': byte-array )
      cut-slice prepend ;
 
-: xor-word ( word1 word2 -- word1^word2 )
+TYPED: xor-word ( word1: byte-array word2: byte-array -- word1^word2: byte-array )
     [ bitxor ] 2map ;
 
 : expand-key-step ( key rcon -- next-key )
@@ -105,13 +105,13 @@ TYPED: gf-mult ( a(x): fixnum b(x): fixnum -- a(x)*b(x)%m(x): fixnum )
 : shift-rows ( state -- state' )
     block-flip [ rot-word ] map-index block-flip ;
 
-: word-product ( word word' -- byte )
+TYPED: word-product ( word: byte-array word': byte-array -- byte: fixnum )
     [ gf-mult ] [ bitxor ] 2map-reduce ;
 
-: matrix-product ( word matrix -- word' )
+TYPED: matrix-product ( word: byte-array matrix -- word': byte-array )
     [ word-product ] with B{ } map-as ;
 
-: mix-column ( word -- word' )
+TYPED: mix-column ( word: byte-array -- word': byte-array )
     { B{ 2 3 1 1 }
       B{ 1 2 3 1 }
       B{ 1 1 2 3 }
@@ -140,7 +140,7 @@ TYPED: gf-mult ( a(x): fixnum b(x): fixnum -- a(x)*b(x)%m(x): fixnum )
 : inv-sub-bytes ( state -- state' )
     [ [ inv-sbox nth ] map ] map ;
 
-: inv-mix-column ( word -- word' )
+TYPED: inv-mix-column ( word: byte-array -- word': byte-array )
     { B{ 0xe 0xb 0xd 0x9 }
       B{ 0x9 0xe 0xb 0xd }
       B{ 0xd 0x9 0xe 0xb }
