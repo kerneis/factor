@@ -99,8 +99,11 @@ TYPED: gf-mult ( a(x): fixnum b(x): fixnum -- a(x)*b(x)%m(x): fixnum )
 : sub-bytes ( state -- state' )
     [ sub-word ] map ;
 
+: block-flip ( state -- state' )
+    flip [ >byte-array ] map ;
+
 : shift-rows ( state -- state' )
-    flip [ rot-word ] map-index flip ;
+    block-flip [ rot-word ] map-index block-flip ;
 
 : word-product ( word word' -- byte )
     [ gf-mult ] [ bitxor ] 2map-reduce ;
@@ -132,7 +135,7 @@ TYPED: gf-mult ( a(x): fixnum b(x): fixnum -- a(x)*b(x)%m(x): fixnum )
 ! Inverse transformations for decrypt
 
 : inv-shift-rows ( state -- state' )
-    flip { 0 3 2 1 } [ rot-word ] 2map flip ;
+    block-flip { 0 3 2 1 } [ rot-word ] 2map block-flip ;
 
 : inv-sub-bytes ( state -- state' )
     [ [ inv-sbox nth ] map ] map ;
