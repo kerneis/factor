@@ -1,7 +1,8 @@
 ! Copyright (C) 2013 Gabriel Kerneis.
 ! Copyright (C) 2008 Doug Coleman.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: kernel sequences grouping tools.test crypto.aes ;
+USING: kernel sequences grouping tools.test crypto.aes
+byte-arrays ;
 IN: crypto.aes.tests
 
 [ B{
@@ -79,7 +80,7 @@ B{
 ! Check that rcon matches its theoretical definition
 [ t ] [
     0x01 11 nxtimes
-    rcon [ first ] map
+    rcon [ first ] map >byte-array
     = ] unit-test
 
 ! FIPS 197, §A.1
