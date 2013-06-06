@@ -158,25 +158,52 @@ TYPED: inv-mix-column ( word: byte-array -- word': byte-array )
     [ swap inv-aes-round ] reduce
     inv-shift-rows inv-sub-bytes add-round-key ;
 
+! Alternative implementation using OpenSSL
+USING: openssl.libcrypto classes.struct ;
+
+: openssl-expand-encrypt-key ( key -- round-keys )
+    concat 128 AES_KEY <struct>
+    [ AES_set_encrypt_key ] keep nip ; ! XXX check return value
+
+: openssl-expand-decrypt-key ( key -- round-keys )
+    concat 128 AES_KEY <struct>
+    [ AES_set_decrypt_key ] keep nip ; ! XXX check return value
+
+: openssl-encrypt ( expanded-key block -- decrypted-block )
+    concat 16 <byte-array> rot [ AES_encrypt ] 2keep drop ;
+
+: openssl-decrypt ( expanded-key block -- decrypted-block )
+    concat 16 <byte-array> rot [ AES_decrypt ] 2keep drop ;
+
+! Benchmarks and profiling
+
 : random-block ( -- block )
     4 [ 4 random-bytes ] replicate ;
 
 ! Expand a random key only once, then apply aes-function to
 ! 1000 random blocks, and output the average speed.
-:: aes-bench ( aes-function -- bench-quot )
-    random-block aes-128-expand-key
+:: aes-bench ( expand-function aes-function -- bench-quot )
+    random-block expand-function call( k -- k' )
     '[ 1000
      [ _ random-block aes-function call( k b -- b' ) drop ]
      times
      ]
     gc ; inline
 
-: time-bench ( aes-function -- block/s )
+: time-bench ( expand-function aes-function -- block/s )
     aes-bench benchmark 1e12 swap / ;
 
-: profile-bench ( aes-function -- )
+: profile-bench ( expand-function aes-function -- )
     aes-bench profile top-down profile. ;
 
 : run-bench ( -- )
-    [ aes-128-encrypt ] time-bench >integer .
-    [ aes-128-decrypt ] time-bench >integer .  ;
+    [ aes-128-expand-key ] [ aes-128-encrypt ]
+    time-bench >integer .
+    [ aes-128-expand-key ] [ aes-128-decrypt ]
+    time-bench >integer .  ;
+
+: openssl-bench ( -- )
+    [ openssl-expand-encrypt-key ] [ openssl-encrypt ]
+    time-bench >integer .
+    [ openssl-expand-decrypt-key ] [ openssl-decrypt ]
+    time-bench >integer .  ;
