@@ -64,8 +64,8 @@ TYPED: xtime ( b(x): fixnum -- x*b(x)%m(x): fixnum )
     [ 0x80 bitand 0 = 0 0x1b ? ] bi bitxor 8 bits ;
 
 ! Accumulate x * ... * x * b(x).
-TYPED: nxtimes ( b(x): fixnum n: fixnum -- seq )
-    [ [ xtime ] keep ] replicate nip ;
+TYPED: nxtimes ( b(x): fixnum n: fixnum -- seq: byte-array )
+    [ [ xtime ] keep ] B{ } replicate-as nip ;
 
 ! See FIPS 197, §4.2.1.
 ! Almost symmetric, but more efficient if a(x) > b(x).
