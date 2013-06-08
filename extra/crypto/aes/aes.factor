@@ -98,7 +98,7 @@ TYPED: xor-word ( word1: byte-array word2: byte-array -- word1^word2: byte-array
     [ xor-word ] accumulate swap suffix rest ;
 
 : aes-128-expand-key ( key -- round-keys )
-    rcon swap [ expand-key-step ] accumulate nip ;
+    4 group rcon swap [ expand-key-step ] accumulate nip ;
 
 : sub-bytes ( state -- state' )
     [ sub-word ] map ;
@@ -131,10 +131,12 @@ TYPED: mix-column ( word: byte-array -- word': byte-array )
    sub-bytes shift-rows mix-columns add-round-key ;
 
 : aes-128-encrypt ( expanded-key block -- encrypted-block )
+    4 group
     [ unclip ] dip add-round-key
     [ unclip-last swap ] dip
     [ swap aes-round ] reduce
-    sub-bytes shift-rows add-round-key ;
+    sub-bytes shift-rows add-round-key
+    concat ;
 
 ! Inverse transformations for decrypt
 
@@ -157,32 +159,34 @@ TYPED: inv-mix-column ( word: byte-array -- word': byte-array )
    inv-shift-rows inv-sub-bytes add-round-key inv-mix-columns ;
 
 : aes-128-decrypt ( expanded-key block -- decrypted-block )
+    4 group
     [ reverse unclip ] dip add-round-key
     [ unclip-last swap ] dip
     [ swap inv-aes-round ] reduce
-    inv-shift-rows inv-sub-bytes add-round-key ;
+    inv-shift-rows inv-sub-bytes add-round-key
+    concat ;
 
 ! Alternative implementation using OpenSSL
 USING: openssl.libcrypto classes.struct ;
 
 : openssl-expand-encrypt-key ( key -- round-keys )
-    concat 128 AES_KEY <struct>
+    128 AES_KEY <struct>
     [ AES_set_encrypt_key ] keep nip ; ! XXX check return value
 
 : openssl-expand-decrypt-key ( key -- round-keys )
-    concat 128 AES_KEY <struct>
+    128 AES_KEY <struct>
     [ AES_set_decrypt_key ] keep nip ; ! XXX check return value
 
 : openssl-encrypt ( expanded-key block -- decrypted-block )
-    concat 16 <byte-array> rot [ AES_encrypt ] 2keep drop ;
+    16 <byte-array> rot [ AES_encrypt ] 2keep drop ;
 
 : openssl-decrypt ( expanded-key block -- decrypted-block )
-    concat 16 <byte-array> rot [ AES_decrypt ] 2keep drop ;
+    16 <byte-array> rot [ AES_decrypt ] 2keep drop ;
 
 ! Benchmarks and profiling
 
 : random-block ( -- block )
-    4 [ 4 random-bytes ] replicate ;
+    16 random-bytes ;
 
 ! Expand a random key only once, then apply aes-function to
 ! 1000 random blocks, and output the average speed.
